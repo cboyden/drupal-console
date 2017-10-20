@@ -111,6 +111,22 @@ class DrupalApi
     /**
      * @return array
      */
+    public function getEntityTypes()
+    {
+        if (!$this->entityTypes) {
+            $entityTypes = $this->entityTypeManager->getDefinitions();
+
+            foreach ($entityTypes as $entityType) {
+                $this->entityTypes[$entityType->id()] = $entityType->getLabel();
+            }
+        }
+
+        return $this->entityTypes;
+    }
+
+    /**
+     * @return array
+     */
     public function getVocabularies()
     {
         if (!$this->vocabularies) {

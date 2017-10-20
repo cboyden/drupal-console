@@ -191,7 +191,7 @@ services:
        - { name: drupal.command }
   console.generate_entitybundle:
     class: Drupal\Console\Command\Generate\EntityBundleCommand
-    arguments: ['@console.validator', '@console.entitybundle_generator', '@console.extension_manager']
+    arguments: ['@console.drupal_api', '@console.validator', '@console.entitybundle_generator', '@console.extension_manager']
     tags:
        - { name: drupal.command }
   console.generate_entityconfig:

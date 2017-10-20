@@ -8,6 +8,7 @@
 namespace Drupal\Console\Command\Generate;
 
 use Drupal\Console\Core\Command\Command;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -16,6 +17,7 @@ use Drupal\Console\Command\Shared\ModuleTrait;
 use Drupal\Console\Command\Shared\ServicesTrait;
 use Drupal\Console\Generator\EntityBundleGenerator;
 use Drupal\Console\Core\Style\DrupalStyle;
+use Drupal\Console\Utils\DrupalApi;
 use Drupal\Console\Extension\Manager;
 use Drupal\Console\Utils\Validator;
 
@@ -24,6 +26,11 @@ class EntityBundleCommand extends Command
     use ModuleTrait;
     use ServicesTrait;
     use ConfirmationTrait;
+
+    /**
+     * @var DrupalApi
+     */
+    protected $drupalApi;
 
     /**
      * @var Validator
@@ -43,15 +50,18 @@ class EntityBundleCommand extends Command
     /**
      * EntityBundleCommand constructor.
      *
+     * @param DrupalApi             $drupalApi
      * @param Validator             $validator
      * @param EntityBundleGenerator $generator
      * @param Manager               $extensionManager
      */
     public function __construct(
+        DrupalApi $drupalApi,
         Validator $validator,
         EntityBundleGenerator $generator,
         Manager $extensionManager
     ) {
+        $this->drupalApi = $drupalApi;
         $this->validator = $validator;
         $this->generator = $generator;
         $this->extensionManager = $extensionManager;
@@ -70,6 +80,11 @@ class EntityBundleCommand extends Command
                 null,
                 InputOption::VALUE_REQUIRED,
                 $this->trans('commands.common.options.module')
+            )
+            ->addArgument(
+                'entity-type',
+                InputArgument::REQUIRED,
+                $this->trans('commands.generate.entity.bundle.options.entity-type')
             )
             ->addOption(
                 'bundle-name',
@@ -99,13 +114,14 @@ class EntityBundleCommand extends Command
         }
 
         $module = $input->getOption('module');
+        $entityType = $input->getArgument('entity-type');
         $bundleName = $input->getOption('bundle-name');
         $bundleTitle = $input->getOption('bundle-title');
 
         $generator = $this->generator;
         //TODO:
         //        $generator->setLearning($learning);
-        $generator->generate($module, $bundleName, $bundleTitle);
+        $generator->generate($module, $entityType, $bundleName, $bundleTitle);
 
         return 0;
     }
@@ -123,6 +139,27 @@ class EntityBundleCommand extends Command
             // @see Drupal\Console\Command\Shared\ModuleTrait::moduleQuestion
             $module = $this->moduleQuestion($io);
             $input->setOption('module', $module);
+        }
+
+        // --entity-type option
+        $entityTypes = $input->getArgument('entity-type');
+        if (!$entityTypes) {
+            $types = $this->supportedTypes();
+            $entityTypes = $io->choice(
+                $this->trans('commands.generate.bundle.questions.entity-type'),
+                array_values($types),
+                null,
+                true
+            );
+
+            $entityTypes = array_map(
+                function ($entityType) use ($types) {
+                    return array_search($entityType, $types);
+                },
+                $entityTypes
+            );
+
+            $input->setArgument('entity-type', $entityTypes);
         }
 
         // --bundle-name option
@@ -150,5 +187,14 @@ class EntityBundleCommand extends Command
             );
             $input->setOption('bundle-title', $bundleTitle);
         }
+    }
+
+    protected function supportedTypes()
+    {
+        return array(
+            'node' => 'Content type',
+            'block_content' => 'Custom block type',
+
+        );
     }
 }
